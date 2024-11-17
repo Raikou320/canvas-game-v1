@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mon premier jeu JavaScript</title>
+  </head>
+  <body>
+    <canvas
+      id="canvas"
+      style="border: 1px solid black"
+      width="900"
+      height="600"
+    ></canvas>
+    <script>
+      //Variables relatives au monde
+      //Canevas
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      //Fin
+      //Scene
+      let scene = 'menu';
+      //Fin
+      //Paramètres du monde
+      const ground = 600;
+      const world = {
+        left: 0,
+        top: 0,
+        right: 900,
+        bottom: ground,
+        gravity: 0.8,
+      };
+      //Fin
+      //Menu
+      function drawMenu() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.font = '30px Arial';
+        ctx.fillStyle = 'orange';
+        ctx.fillText('Menu', 450, 200);
+        ctx.closePath();
+        ctx.beginPath();
+        ctx.fillStyle = 'red';
+        ctx.font = '20px Arial';
+        ctx.fillText('Press Enter for begin', 400, 250);
+        ctx.closePath();
+      }
+      //Fin
+      //Passer du menu au niveau 1
+      document.addEventListener('keydown', (e) => {
+        if (scene === 'menu' && e.key === 'Enter') scene = 'lv1';
+      });
+      //Niveau 1
+      //Paramètres du niveau 1
+      const lv1 = {
+        //Joueur
+        player: {
+          x: 25,
+          y: 575,
+          r: 25,
+          color: 'red',
+          speedX: 0,
+          speedY: 0,
+          jumpPower: -15,
+          jumpCount: 0,
+        },
+        //Fin
+        //Ennemi
+        enemy: {
+          x: 150,
+          y: 580,
+          r: 20,
+          color: 'blue',
+          speedX: 5,
+        },
+        //Fin
+        //Plateforme
+        platform: {
+          x: 200,
+          y: 500,
+          w: 150,
+          h: 50,
+          color: 'yellow',
+        },
+        //Fin
+        //Point de victoire
+        winPoint: {
+          x: 870,
+          y: 560,
+          r: 30,
+          color: 'green',
+        },
+        //Fin
+      };
+      //Fin
+      //Dessiner le niveau 1
+      function drawLv1() {
+        const player = lv1.player;
+        const enemy = lv1.enemy;
+        const platform = lv1.platform;
+        const winPoint = lv1.winPoint;
+        player.x += player.speedX;
+        player.y += player.speedY;
+        player.y += world.gravity;
+        player.speedX *= 0.9;
+        player.speedY *= 0.8;
+        enemy.x += enemy.speedX;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.fillStyle = player.color;
+        ctx.arc(player.x, player.y, player.r, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.closePath();
+        ctx.beginPath();
+        ctx.fillStyle = enemy.color;
+        ctx.arc(enemy.x, enemy.y, enemy.r, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.closePath();
+        ctx.beginPath();
+        ctx.fillStyle = platform.color;
+        ctx.fillRect(platform.x, platform.y, platform.w, platform.h);
+        ctx.fill();
+        ctx.closePath();
+        ctx.beginPath();
+        ctx.fillStyle = winPoint.color;
+        ctx.arc(winPoint.x, winPoint.y, winPoint.r, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.closePath();
+      }
+      //Fin
+      //Réinitialiser le jeu
+      function resetGame() {
+        const playerLv1 = lv1.player;
+        const enemyLv1 = lv1.enemy;
+        playerLv1.x = 25;
+        playerLv1.y = 575;
+        enemyLv1.x = 150;
+        enemyLv1.y = 580;
+        enemyLv1.speedX = 5;
+        enemyLv1.r = 20
+      }
+      //Fin
+      //Vérifier si le joueur touche l'ennemi
+      function checkDeath() {
+        if (scene === 'lv1') {
+          const tolerance = 25;
+          const player = lv1.player;
+          const enemy = lv1.enemy;
+          const dx = player.x - enemy.x;
+          const dy = player.y - enemy.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const collision = distance <= player.r + enemy.r + -10;
+          const collisionForHigh = distance <= player.r + enemy.r + tolerance;
+          const collisionHigh =
+            collisionForHigh && player.y + player.r <= enemy.y - enemy.r;
+          if (collisionHigh === true) enemy.r = 0;
+          else if (collision === true && collisionHigh !== true) {
+            alert('Perdu !');
+            scene = 'menu';
+            resetGame();
+          }
+        }
+      }
+      //Fin
+      //Vérifier si le joueur ou l'ennemi touchent le bord de la carte
+      function checkWorldBorder() {
+        if (scene === 'lv1') {
+          const player = lv1.player;
+          const enemy = lv1.enemy;
+          if (player.x + player.r > world.right)
+            player.x = world.right - player.r;
+          if (player.x - player.r < world.left)
+            player.x = world.left + player.r;
+          if (player.y + player.r > world.bottom) {
+            player.y = world.bottom - player.r;
+            player.jumpCount = 0;
+          }
+          if (enemy.x + enemy.r > world.right) {
+            enemy.speedX *= -1;
+          }
+          if (enemy.x - enemy.r < world.left) {
+            enemy.speedX *= -1;
+          }
+        }
+      }
+      //Fin
+      //Détecter les collisions entre le joueur et les plateformes
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(value, max));
+      }
+      function detectCollisionCircleRectangle(cx, cy, r, rx, ry, rw, rh) {
+        let closestX = clamp(cx, rx, rx + rw);
+        let closestY = clamp(cy, ry, ry + rh);
+        let distanceX = cx - closestX;
+        let distanceY = cy - closestY;
+        let distanceSquared = distanceX * distanceX + distanceY * distanceY;
+        return distanceSquared <= r * r;
+      }
+      //Fin
+      //Détecter si le joueur à gagné
+      function checkVictory() {
+        if (scene === "lv1") {
+          const player = lv1.player
+          const winPoint = lv1.winPoint
+          const dx = player.x - winPoint.x
+          const dy = player.y - winPoint.y
+          const distance = Math.sqrt(dx * dx + dy * dy)
+          if (distance <= player.r + winPoint.r) {
+            alert('Gagné')
+            scene = "menu"
+            resetGame()
+          }
+        }
+      }
+      //Fin
+      //Boucle de jeu
+      function gameLoop() {
+        if (scene === 'menu') drawMenu();
+        else if (scene === 'lv1') {
+          const player = lv1.player;
+          const platform = lv1.platform;
+          drawLv1();
+          const playerCollidePlatform = detectCollisionCircleRectangle(
+            player.x,
+            player.y,
+            player.r,
+            platform.x,
+            platform.y,
+            platform.w,
+            platform.h
+          );
+          if (playerCollidePlatform === true) {
+            player.y = platform.y + platform.h * -1 - player.r;
+            player.jumpCount = 0;
+            world.gravity = 50;
+          } else {
+            world.gravity = 0.8;
+          }
+        }
+        checkWorldBorder();
+        checkDeath();
+        checkVictory();
+        requestAnimationFrame(gameLoop);
+      }
+      //Fin
+      //Appeller la boucle de jeu
+      gameLoop();
+      //Fin
+      //Contrôles
+      const keyPressed = {};
+      document.addEventListener('keydown', (e) => {
+        if (scene === 'lv1') {
+          const player = lv1.player;
+          if (e.key.toLowerCase() === 'q' || e.key === 'ArrowLeft')
+            player.speedX = -5;
+          else if (e.key.toLowerCase() === 'd' || e.key === 'ArrowRight')
+            player.speedX = 5;
+          if (
+            (e.key.toLowerCase() === 'z' && player.jumpCount < 2) ||
+            (e.key === ' ' && player.jumpCount < 2) ||
+            (e.key === 'ArrowUp' && player.jumpCount < 2)
+          ) {
+            player.speedY += player.jumpPower;
+            player.jumpCount++;
+          }
+        }
+        keyPressed[e.key] = true;
+      });
+      document.addEventListener('keydown', () => {
+        if (scene === 'lv1') {
+          if (keyPressed['z'] && keyPressed['q'] && lv1.player.jumpCount < 2) {
+            lv1.player.speedX -= 5;
+            lv1.player.speedY += lv1.player.jumpPower;
+            lv1.player.jumpCount++;
+          }
+          if (keyPressed['z'] && keyPressed['d'] && lv1.player.jumpCount < 2) {
+            lv1.player.speedX += 5;
+            lv1.player.speedY += lv1.player.jumpPower;
+            lv1.player.jumpCount++;
+          }
+        }
+      });
+      document.addEventListener('keyup', (e) => {
+        keyPressed[e.key] = false;
+      });
+      //Fin
+    </script>
+  </body>
+</html>
