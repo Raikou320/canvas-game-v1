@@ -3,18 +3,21 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main
+      - main  # or the branch you're working with
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      # Checkout the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Deploy to GitHub Pages
-      uses: JamesIves/github-pages-deploy-action@v4
-      with:
-        branch: gh-pages
-        folder: .
+      # Build or copy the project files to the `gh-pages` branch
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages  # The branch to deploy to
+          folder: .         # The folder to deploy, '.' means the root of the repository
+          token: ${{ secrets.GITHUB_TOKEN }}  # GitHub automatically provides this token
